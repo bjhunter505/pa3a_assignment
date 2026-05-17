@@ -126,8 +126,26 @@ class RNN:
         if h_0 is not None: # If given, store the initial hidden state 
             hiddens[0,:,:,:] = h_0
 
-        # TODO: Process input, timestep by timestep, layer by layer.
-        
+        # Process input, timestep by timestep, layer by layer.
+        for t in range(seq_len):
+            for l in range(self.num_layers):
+                # Get input to this layer at this timestep
+                # if l == 0, else the output of the previous layer at this timestep
+                if l == 0:
+                    input_l = x[:, t, :]  # (batch_size, input_size) — from raw input
+                else:
+                    input_l = hiddens[
+                        t + 1, l - 1, :, :]  # (batch_size, hidden_size) — from previous layer at same timestep
+
+                # Get the previous hidden state (same layer, previous timestep)
+                h_prev_t = hiddens[t, l, :, :]  # (batch_size, hidden_size)
+
+                # Forward through this layer's RNNCell
+                h_out = self.layers[l].forward(input_l, h_prev_t)  # (batch_size, hidden_size)
+
+                # Store the output hidden state for this layer and timestep
+                hiddens[t + 1, l, :, :] = h_out
+
         # [Given] Save the original input and hidden vectors we used, for backprop later.
         self.x = x
         self.hiddens = hiddens
