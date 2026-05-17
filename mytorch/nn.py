@@ -67,17 +67,19 @@ class RNNCell:
         Returns:
             np.array, np.array: shaped (batch_size, input_size) and (batch_size, hidden_size)
         """
-        # TODO: Backprop through the activation function
+        # Backprop through the activation function
         # Using h_t = The state is the output of RNNCell.forward() at the current timestep.
         grad_activation = grad * self.activation.backward(h_t)
 
-        # TODO: Accumulate the gradients for the weights and biases
+        # Accumulate the gradients for the weights and biases
         self.grad_bias_ih += np.sum(grad_activation, axis=0)
         self.grad_bias_hh += np.sum(grad_activation, axis=0)
         self.grad_weight_ih += np.dot(grad_activation.T, h_prev_l)
         self.grad_weight_hh += np.dot(grad_activation.T, h_prev_t)
 
-        # TODO: Calculate gradients for the input and the previous hidden state
+        # Calculate gradients for the input and the previous hidden state
+        dx = np.dot(grad_activation, self.weight_ih)
+        dh = np.dot(grad_activation, self.weight_hh)
 
         return dx, dh
 
