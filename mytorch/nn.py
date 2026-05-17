@@ -47,10 +47,12 @@ class RNNCell:
         Returns:
             np.array: (batch_size, hidden_size)
         """
-        # TODO: Calculate y_t 
+        # Calculate y_t
+        y_t = np.dot(x_t, self.weight_ih.T) + self.bias_ih + np.dot(h_prev, self.weight_hh.T) + self.bias_hh
         
-        # TODO: Calculate h_t
-        
+        # Calculate h_t
+        h_t = self.activation.forward(y_t)
+
         return h_t
 
     def backward(self, grad, h_t, h_prev_l, h_prev_t):
@@ -66,6 +68,7 @@ class RNNCell:
             np.array, np.array: shaped (batch_size, input_size) and (batch_size, hidden_size)
         """
         # TODO: Backprop through the activation function
+
         
         # TODO: Accumulate the gradients for the weights and biases
 
