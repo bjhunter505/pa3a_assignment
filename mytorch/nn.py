@@ -173,6 +173,47 @@ class RNN:
         dh_0 = np.zeros((self.num_layers, batch_size, self.hidden_size))
         dh_0[-1,:,:] = grad
 
-        # TODO: For each timestep in reverse order, iterate backwards through the layers and run backprop for each one.
-        
+        # dh_next stores gradient flowing into each layer's hidden state from the "future" (next timestep) or upper layer
+        dh_next = np.zeros((self.num_layers, batch_size, self.hidden_size))
+
+        # The provided grad is the gradient wrt the output of the last timestep's top layer.
+        # Put it into the top layer's dh_next so it will be consumed at t = seq_len-1.
+        dh_next[-1, :, :] = grad
+
+        # Iterate timesteps in reverse (BPTT)
+        for t in reversed(range(seq_len)):  # t = seq_len-1, ..., 0
+            # for each layer l in reverse order from num_layers-1 to 1 (inclusive on both sides)
+            for l in range(self.num_layers - 1, -1, -1):
+                # Total gradient into this cell (from next timestep same layer + from upper layer same timestep)
+                total_grad = dh_next[l, :, :].copy()
+
+                # Input from previous layer at this timestep (for l==0, that's the raw input)
+                if l == 0:
+                    h_prev_l = self.x[:, t, :]  # (batch_size, input_size)
+                else:
+                    h_prev_l = self.hiddens[t + 1, l - 1, :, :]  # (batch_size, hidden_size)
+
+                # previous timestep hidden for this layer
+                h_prev_t = self.hiddens[t, l, :, :]  # (batch_size, hidden_size)
+
+                # current output (h_t) of this layer at this timestep (saved during forward)
+                h_t = self.hiddens[t + 1, l, :, :]  # (batch_size, hidden_size)
+
+                # Backprop through the cell
+                # returns dx_l (grad wrt input to this layer at this timestep)
+                # and dh_prev_t (grad wrt this layer's previous timestep hidden)
+                dx_l, dh_prev_t = self.layers[l].backward(total_grad, h_t, h_prev_l, h_prev_t)
+
+                # The dh_prev_t becomes the dh_next for this layer when moving to the previous timestep
+                dh_next[l, :, :] = dh_prev_t
+
+                # If not the bottom layer, dx_l is grad wrt previous layer's output -> accumulate into dh_next[l-1]
+                if l > 0:
+                    dh_next[l - 1, :, :] += dx_l
+                else:
+                    # For the bottom layer, dx_l is gradient wrt the raw input -> store in dx
+                    dx[:, t, :] = dx_l
+
+        # After processing all timesteps, dh_next holds gradients wrt initial hidden states h_0
+        dh_0 = dh_next
         return dx, dh_0
